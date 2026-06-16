@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>소리의 디지털 표현 — 인터랙티브 학습지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#E9ECF2;
+    --card:#FFFFFF;
+    --ink:#161A20;
+    --muted:#6E7682;
+    --line:#DCE1EA;
+    --scope-bg:#0F141C;
+    --scope-grid:rgba(130,150,172,0.16);
+    --scope-axis:rgba(170,188,208,0.45);
+    --analog:#FF6A3D;   /* 아날로그 = 따뜻한 색 */
+    --digital:#1CC3CE;  /* 디지털 = 차가운 색 */
+    --level:#8A93A3;
+    --accent:#5457E6;
+    --good:#1FB071;
+    --bad:#FF5B5B;
+    --font-ko:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    --font-mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-ko);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* ---------- 헤더 ---------- */
+  header.masthead{
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:18px;
+    padding:26px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin:0 0 8px;
+  }
+  h1.title{font-size:30px;line-height:1.2;margin:0 0 6px;font-weight:800;letter-spacing:-0.01em;}
+  .subtitle{color:var(--muted);margin:0;font-size:15px;}
+  .wavemark{
+    position:absolute;right:-10px;top:0;bottom:0;width:230px;opacity:0.9;pointer-events:none;
+  }
+  @media(max-width:640px){.wavemark{display:none;}}
+
+  .namebar{
+    display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+    margin-top:18px;
+  }
+  .namebar label{font-size:13px;color:var(--muted);font-weight:600;}
+  .namebar input{
+    font-family:var(--font-ko);font-size:14px;padding:7px 11px;border:1px solid var(--line);
+    border-radius:9px;background:#F7F9FC;min-width:120px;
+  }
+  .namebar input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+
+  /* ---------- 스텝퍼 ---------- */
+  .stepper{display:flex;gap:10px;margin:22px 0 18px;flex-wrap:wrap;}
+  .stepbtn{
+    flex:1 1 120px;min-width:120px;text-align:left;cursor:pointer;
+    border:1px solid var(--line);background:var(--card);border-radius:13px;
+    padding:12px 14px;display:flex;gap:11px;align-items:center;
+    transition:border-color .15s,box-shadow .15s,transform .05s;font-family:var(--font-ko);
+  }
+  .stepbtn:hover{border-color:#BFC6D4;}
+  .stepbtn:active{transform:translateY(1px);}
+  .stepbtn .num{
+    font-family:var(--font-mono);font-weight:700;font-size:13px;
+    width:30px;height:30px;flex:0 0 30px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    background:#EEF0F6;color:var(--muted);
+  }
+  .stepbtn .lbl{font-weight:700;font-size:14px;}
+  .stepbtn .sub{font-size:11.5px;color:var(--muted);font-weight:500;}
+  .stepbtn.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(84,87,230,0.12);}
+  .stepbtn.active .num{background:var(--accent);color:#fff;}
+  .stepbtn.done .num{background:var(--good);color:#fff;}
+
+  /* ---------- 패널 ---------- */
+  .panel{display:none;animation:fade .25s ease;}
+  .panel.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .card{
+    border:1px solid var(--line);background:var(--card);border-radius:16px;
+    padding:22px 24px;margin-bottom:16px;
+  }
+  .card h2{font-size:20px;margin:0 0 4px;font-weight:800;letter-spacing:-0.01em;}
+  .card .lead{color:var(--muted);margin:0 0 16px;font-size:14.5px;}
+  .card p{font-size:14.5px;}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
+    font-size:11px;font-weight:700;letter-spacing:0.04em;
+    padding:3px 9px;border-radius:999px;text-transform:uppercase;
+  }
+  .pill.analog{background:rgba(255,106,61,0.13);color:#C2461F;}
+  .pill.digital{background:rgba(28,195,206,0.15);color:#0A7C84;}
+
+  /* ---------- 스코프(캔버스) ---------- */
+  .scope{
+    background:var(--scope-bg);border-radius:14px;padding:14px;
+    position:relative;
+  }
+  canvas{display:block;width:100%;height:auto;border-radius:8px;cursor:crosshair;touch-action:none;}
+  .scope .axlabel{
+    position:absolute;font-family:var(--font-mono);font-size:10px;color:var(--scope-axis);
+    letter-spacing:.05em;
+  }
+  .axlabel.y{left:6px;top:10px;}
+  .axlabel.x{right:14px;bottom:6px;}
+
+  /* ---------- 컨트롤 ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0 6px;}
+  .ctl{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600;}
+  .ctl select{
+    font-family:var(--font-mono);font-size:13px;padding:6px 9px;border-radius:8px;
+    border:1px solid var(--line);background:#F7F9FC;font-weight:700;color:var(--ink);
+  }
+  .btn{
+    font-family:var(--font-ko);font-weight:700;font-size:14px;cursor:pointer;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;
+    padding:9px 16px;border-radius:10px;transition:filter .15s,transform .05s;
+  }
+  .btn:hover{filter:brightness(1.06);}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{background:#fff;color:var(--accent);}
+  .btn.subtle{background:#EEF0F6;color:var(--ink);border-color:var(--line);}
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+
+  .feedback{
+    margin-top:14px;padding:12px 15px;border-radius:11px;font-size:14px;font-weight:600;
+    border:1px solid var(--line);background:#F7F9FC;color:var(--muted);min-height:20px;
+  }
+  .feedback.ok{background:rgba(31,176,113,0.1);border-color:rgba(31,176,113,0.4);color:#127a4e;}
+  .feedback.warn{background:rgba(255,91,91,0.08);border-color:rgba(255,91,91,0.4);color:#c23434;}
+
+  .hint{
+    font-size:13.5px;background:#F4F6FB;border-left:3px solid var(--accent);
+    padding:11px 14px;border-radius:0 10px 10px 0;color:#37404e;margin:14px 0;
+  }
+  .hint b{color:var(--ink);}
+
+  /* ---------- step3 부호화 표 ---------- */
+  .enc-row{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;
+    background:#FBFCFE;
+  }
+  .enc-row .meta{display:flex;align-items:center;gap:10px;min-width:160px;}
+  .enc-row .tnum{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-weight:700;}
+  .enc-row .lvl{
+    font-family:var(--font-mono);font-weight:700;font-size:15px;
+    background:rgba(28,195,206,0.14);color:#0A7C84;padding:4px 11px;border-radius:8px;
+  }
+  .bits{display:flex;gap:7px;}
+  .bit{
+    font-family:var(--font-mono);font-weight:700;font-size:16px;width:40px;height:40px;
+    border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;
+    color:var(--muted);transition:.12s;
+  }
+  .bit.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .enc-row .res{font-family:var(--font-mono);font-size:13px;margin-left:auto;font-weight:700;}
+  .enc-row .res.ok{color:var(--good);}
+  .enc-row .res.bad{color:var(--bad);}
+
+  .stream{
+    margin-top:8px;background:var(--scope-bg);border-radius:12px;padding:16px 18px;
+    font-family:var(--font-mono);color:#cfe9ec;font-size:15px;letter-spacing:.06em;
+    word-break:break-all;line-height:1.9;
+  }
+  .stream .lab{display:block;color:var(--scope-axis);font-size:11px;letter-spacing:.12em;margin-bottom:8px;text-transform:uppercase;}
+  .stream b{color:var(--digital);}
+
+  /* ---------- 정리 ---------- */
+  textarea.reflect{
+    width:100%;font-family:var(--font-ko);font-size:14px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:11px;background:#FBFCFE;resize:vertical;min-height:74px;
+  }
+  textarea.reflect:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .qlabel{font-weight:700;font-size:14.5px;margin:16px 0 7px;}
+  .recap{display:grid;grid-template-columns:1fr;gap:0;margin:6px 0 4px;}
+  .recap .r{display:flex;gap:13px;padding:13px 0;border-top:1px dashed var(--line);}
+  .recap .r:first-child{border-top:none;}
+  .recap .rn{font-family:var(--font-mono);font-weight:700;color:var(--accent);flex:0 0 28px;}
+  .recap .rt b{display:block;font-size:14.5px;}
+  .recap .rt span{font-size:13.5px;color:var(--muted);}
+
+  footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:24px;}
+
+  @media print{
+    body{background:#fff;}
+    .stepper,.wavemark,.btn,.controls,.scope{display:none !important;}
+    .panel{display:block !important;}
+    .card{break-inside:avoid;border-color:#ccc;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <svg class="wavemark" viewBox="0 0 230 160" preserveAspectRatio="none" aria-hidden="true">
+      <path id="mark-wave" fill="none" stroke="var(--analog)" stroke-width="2.5" opacity="0.55"/>
+      <g id="mark-dots"></g>
+    </svg>
+    <p class="eyebrow">정보 · 데이터의 디지털 표현</p>
+    <h1 class="title">소리의 디지털 표현</h1>
+    <p class="subtitle">아날로그 소리가 0과 1이 되기까지 — 직접 점을 찍어 보는 3단계 실습</p>
+    <div class="namebar">
+      <label>학년·반·번호 <input id="who" type="text" placeholder="예) 2-3-11" /></label>
+      <label>이름 <input id="name" type="text" placeholder="이름" /></label>
+    </div>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button class="stepbtn active" data-step="1">
+      <span class="num">01</span><span><span class="lbl">표본화</span><br><span class="sub">Sampling</span></span>
+    </button>
+    <button class="stepbtn" data-step="2">
+      <span class="num">02</span><span><span class="lbl">양자화</span><br><span class="sub">Quantization</span></span>
+    </button>
+    <button class="stepbtn" data-step="3">
+      <span class="num">03</span><span><span class="lbl">부호화</span><br><span class="sub">Encoding</span></span>
+    </button>
+    <button class="stepbtn" data-step="4">
+      <span class="num">★</span><span><span class="lbl">정리하기</span><br><span class="sub">Review</span></span>
+    </button>
+  </nav>
+
+  <!-- ============ STEP 0 안내 (1단계 안에 포함) ============ -->
+
+  <!-- ============ STEP 1 : 표본화 ============ -->
+  <section class="panel active" data-panel="1">
+    <div class="card">
+      <h2>1단계 · 표본화 <span class="pill analog">아날로그 → 점</span></h2>
+      <p class="lead">연속적으로 이어진 아날로그 소리 파형을, <b>일정한 시간 간격</b>마다 끊어서 그 순간의 높이(진폭)만 읽어 내는 과정이에요.</p>
+
+      <div class="hint">
+        <b>해 보기</b> · 주황색 파형이 세로 점선과 만나는 <b>높이</b>를 눈으로 읽고, 그 위치를 클릭해 점을 찍어 보세요. 점선마다 하나씩 찍으면 됩니다.
+      </div>
+
+      <div class="scope">
+        <span class="axlabel y">진폭 ↑</span>
+        <span class="axlabel x">시간 →</span>
+        <canvas id="cv1"></canvas>
+      </div>
+
+      <div class="controls">
+        <div class="ctl">표본 개수
+          <select id="numSamples">
+            <option value="4">4개 (성김)</option>
+            <option value="8" selected>8개</option>
+            <option value="16">16개 (촘촘)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="check1">정답 확인</button>
+        <button class="btn ghost" id="reveal1">정답 자동 채우기</button>
+        <button class="btn subtle" id="reset1">다시 찍기</button>
+      </div>
+      <div class="feedback" id="fb1">점선마다 점을 찍은 뒤 <b>정답 확인</b>을 눌러 보세요.</div>
+
+      <div class="hint" style="margin-top:18px;">
+        <b>생각해 보기</b> · 표본 개수를 <b>4개</b>와 <b>16개</b>로 바꿔 보세요. 점을 이어 만든 디지털 파형(청록색)이 원래 소리와 더 비슷해지는 건 언제인가요? 이것이 <b>표본화율(sampling rate)</b>의 의미입니다.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 : 양자화 ============ -->
+  <section class="panel" data-panel="2">
+    <div class="card">
+      <h2>2단계 · 양자화 <span class="pill digital">높이를 단계로</span></h2>
+      <p class="lead">표본으로 읽은 높이를 컴퓨터가 다룰 수 있게 <b>정해진 몇 개의 단계(level)</b> 중 가장 가까운 값으로 맞추는 과정이에요.</p>
+
+      <div class="hint">
+        <b>해 보기</b> · 각 표본(주황 동그라미)에 대해, 가장 가까운 <b>가로 눈금(단계)</b> 위를 클릭해 네모를 올려 보세요. 표본의 높이를 어느 단계로 반올림할지 정하는 거예요.
+      </div>
+
+      <div class="scope">
+        <span class="axlabel y">단계 ↑</span>
+        <span class="axlabel x">시간 →</span>
+        <canvas id="cv2"></canvas>
+      </div>
+
+      <div class="controls">
+        <div class="ctl">단계 수 (비트)
+          <select id="bits">
+            <option value="1">2단계 (1비트)</option>
+            <option value="2">4단계 (2비트)</option>
+            <option value="3" selected>8단계 (3비트)</option>
+            <option value="4">16단계 (4비트)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="check2">정답 확인</button>
+        <button class="btn ghost" id="reveal2">정답 자동 채우기</button>
+        <button class="btn subtle" id="reset2">다시 하기</button>
+      </div>
+      <div class="feedback" id="fb2">표본마다 가장 가까운 단계를 클릭해 보세요.</div>
+
+      <div class="hint" style="margin-top:18px;">
+        <b>생각해 보기</b> · 단계 수를 <b>2단계</b>로 줄이면 계단이 거칠어지고, <b>16단계</b>로 늘리면 원래 높이에 더 가까워져요. 단계가 많을수록(비트 수가 클수록) 소리가 더 정밀해지지만 데이터는 더 커집니다.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3 : 부호화 ============ -->
+  <section class="panel" data-panel="3">
+    <div class="card">
+      <h2>3단계 · 부호화 <span class="pill digital">단계 → 0과 1</span></h2>
+      <p class="lead">양자화로 정해진 각 단계의 번호를 <b>2진수</b>로 바꾸면, 드디어 소리가 0과 1의 나열이 됩니다.</p>
+
+      <div class="hint">
+        <b>해 보기</b> · 각 표본의 <b>단계 번호</b>를 2진수로 만들어 보세요. 비트 버튼을 눌러 0/1을 켜고 끄면 됩니다. <span id="bitsNote"></span>
+      </div>
+
+      <div id="encList"></div>
+
+      <div class="btn-row">
+        <button class="btn" id="check3">정답 확인</button>
+        <button class="btn ghost" id="reveal3">정답 자동 채우기</button>
+        <button class="btn subtle" id="reset3">다시 하기</button>
+      </div>
+      <div class="feedback" id="fb3">각 단계 번호를 2진수로 바꿔 보세요.</div>
+
+      <div class="stream" id="stream">
+        <span class="lab">완성된 소리 데이터 (Bitstream)</span>
+        <span id="streamText">— 표본을 부호화하면 여기에 나타납니다 —</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin:14px 0 0;">이 0과 1의 묶음이 바로 컴퓨터·스마트폰에 저장되고 전송되는 디지털 소리 데이터입니다.</p>
+    </div>
+  </section>
+
+  <!-- ============ STEP 4 : 정리 ============ -->
+  <section class="panel" data-panel="4">
+    <div class="card">
+      <h2>정리하기</h2>
+      <p class="lead">아날로그 소리 → 디지털 데이터, 세 단계를 한눈에 다시 봅시다.</p>
+      <div class="recap">
+        <div class="r"><span class="rn">01</span><span class="rt"><b>표본화 (Sampling)</b><span>일정한 시간 간격마다 소리의 높이를 읽어 점으로 나타낸다.</span></span></div>
+        <div class="r"><span class="rn">02</span><span class="rt"><b>양자화 (Quantization)</b><span>읽은 높이를 정해진 단계 중 가장 가까운 값으로 맞춘다.</span></span></div>
+        <div class="r"><span class="rn">03</span><span class="rt"><b>부호화 (Encoding)</b><span>각 단계의 번호를 2진수(0과 1)로 바꿔 저장한다.</span></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="qlabel">Q1. 표본 개수(표본화율)를 늘리면 디지털 소리는 어떻게 달라지나요? 그 이유도 함께 써 보세요.</p>
+      <textarea class="reflect" id="q1"></textarea>
+      <p class="qlabel">Q2. 양자화 단계 수(비트)를 늘리면 무엇이 좋아지고, 무엇이 늘어나나요?</p>
+      <textarea class="reflect" id="q2"></textarea>
+      <p class="qlabel">Q3. 똑같은 소리인데도 더 '고음질' 파일이 용량이 큰 이유를, 오늘 배운 세 단어(표본화·양자화·부호화)를 사용해 설명해 보세요.</p>
+      <textarea class="reflect" id="q3"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="printBtn">학습지 인쇄 / PDF 저장</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">소리의 디지털 표현 인터랙티브 학습지 · 정보과</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 공통 상태 ----------
+  var state = {
+    numSamples: 8,
+    bits: 3,
+    s1: {},   // i -> {y, checked, correct}
+    s2: {},   // i -> {level, checked, correct}
+    s3: {}    // i -> [bits...]
+  };
+
+  // 아날로그 파형 함수: 0..1 시간 -> 0..1 진폭
+  function analog(x){
+    var v = 0.5 + 0.30*Math.sin(2*Math.PI*1.2*x + 0.35) + 0.13*Math.sin(2*Math.PI*3.1*x + 0.6);
+    return Math.max(0.05, Math.min(0.95, v));
+  }
+  function sampleTime(i, n){ return (i + 0.5) / n; }       // i번째 표본의 시각
+  function trueValue(i, n){ return analog(sampleTime(i, n)); }
+  function levels(){ return Math.pow(2, state.bits); }
+  function trueLevel(i, n){                                 // 가장 가까운 양자화 단계
+    var L = levels();
+    return Math.round(trueValue(i, n) * (L - 1));
+  }
+  function levelToY(k){ var L = levels(); return (L<=1) ? 0.5 : k/(L-1); } // 단계 -> 진폭(0..1)
+
+  // ---------- 캔버스 도우미 ----------
+  function setupCanvas(cv, h){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.parentElement.clientWidth - 28; // padding 14*2
+    if(w < 200) w = 200;
+    cv.style.width = w + "px";
+    cv.style.height = h + "px";
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    var ctx = cv.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx, w:w, h:h};
+  }
+  // 데이터(0..1, 0..1) -> 픽셀. y는 위가 큰 값.
+  function makeMap(w, h){
+    var padL=34, padR=16, padT=16, padB=24;
+    return {
+      px: function(x){ return padL + x*(w-padL-padR); },
+      py: function(y){ return padT + (1-y)*(h-padT-padB); },
+      ux: function(px){ return (px-padL)/(w-padL-padR); },
+      uy: function(py){ return 1 - (py-padT)/(h-padT-padB); },
+      padL:padL,padR:padR,padT:padT,padB:padB
+    };
+  }
+  function evtPos(cv, e){
+    var r = cv.getBoundingClientRect();
+    var cx = (e.touches? e.touches[0].clientX : e.clientX) - r.left;
+    var cy = (e.touches? e.touches[0].clientY : e.clientY) - r.top;
+    return {x:cx, y:cy};
+  }
+
+  // =================================================================
+  // STEP 1 : 표본화
+  // =================================================================
+  var cv1 = document.getElementById("cv1");
+  var revealed1 = false;
+
+  function draw1(){
+    var c = setupCanvas(cv1, 300);
+    var ctx=c.ctx, w=c.w, h=c.h, m=makeMap(w,h);
+    var n = state.numSamples;
+    ctx.clearRect(0,0,w,h);
+
+    // 격자
+    ctx.strokeStyle="rgba(130,150,172,0.16)"; ctx.lineWidth=1;
+    for(var gy=0; gy<=4; gy++){ var yy=m.py(gy/4); ctx.beginPath(); ctx.moveTo(m.padL,yy); ctx.lineTo(w-m.padR,yy); ctx.stroke(); }
+
+    // 표본 시점 세로 점선
+    ctx.strokeStyle="rgba(170,188,208,0.30)"; ctx.setLineDash([4,5]);
+    for(var i=0;i<n;i++){ var xx=m.px(sampleTime(i,n)); ctx.beginPath(); ctx.moveTo(xx,m.padT); ctx.lineTo(xx,h-m.padB); ctx.stroke(); }
+    ctx.setLineDash([]);
+
+    // 아날로그 파형
+    ctx.strokeStyle="#FF6A3D"; ctx.lineWidth=2.4; ctx.beginPath();
+    for(var s=0;s<=320;s++){ var t=s/320; var X=m.px(t), Y=m.py(analog(t)); (s===0)?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+    ctx.stroke();
+
+    // 학생이 찍은 점 + (정답 표시 시) 복원선
+    var anyPoint=false;
+    if(revealed1){
+      // 표본 점 잇는 복원선(디지털 근사)
+      ctx.strokeStyle="rgba(28,195,206,0.85)"; ctx.lineWidth=2; ctx.beginPath();
+      for(var j=0;j<n;j++){ var p=state.s1[j]; var yv=(p? p.y : trueValue(j,n)); var X2=m.px(sampleTime(j,n)), Y2=m.py(yv); (j===0)?ctx.moveTo(X2,Y2):ctx.lineTo(X2,Y2); }
+      ctx.stroke();
+    }
+    for(var k=0;k<n;k++){
+      var pt=state.s1[k]; if(!pt) continue; anyPoint=true;
+      var cx=m.px(sampleTime(k,n)), cy=m.py(pt.y);
+      var col = pt.checked ? (pt.correct? "#1FB071":"#FF5B5B") : "#1CC3CE";
+      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(cx,cy,6,0,7); ctx.fill();
+      ctx.fillStyle="#0F141C"; ctx.beginPath(); ctx.arc(cx,cy,2.3,0,7); ctx.fill();
+    }
+    // 축 라벨 숫자
+    ctx.fillStyle="rgba(170,188,208,0.55)"; ctx.font="10px 'Space Mono',monospace";
+    ctx.fillText("1.0",6,m.py(1)+3); ctx.fillText("0.0",6,m.py(0)+3);
+  }
+
+  cv1.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    var w = cv1.clientWidth, h = cv1.clientHeight;
+    var m = makeMap(w,h);
+    var p = evtPos(cv1,e);
+    var n = state.numSamples;
+    // 가장 가까운 표본 시점에 스냅
+    var ux = m.ux(p.x);
+    var best=0, bd=1e9;
+    for(var i=0;i<n;i++){ var d=Math.abs(sampleTime(i,n)-ux); if(d<bd){bd=d;best=i;} }
+    var uy = Math.max(0, Math.min(1, m.uy(p.y)));
+    state.s1[best] = {y:uy, checked:false, correct:false};
+    revealed1=false;
+    draw1();
+    setFb("fb1","",""); 
+  });
+
+  document.getElementById("check1").addEventListener("click", function(){
+    var n=state.numSamples, total=0, good=0, placed=0;
+    for(var i=0;i<n;i++){
+      total++;
+      var p=state.s1[i];
+      if(!p){ continue; }
+      placed++;
+      var diff=Math.abs(p.y - trueValue(i,n));
+      p.checked=true; p.correct = diff <= 0.07;  // 허용 오차
+      if(p.correct) good++;
+    }
+    revealed1 = true; draw1();
+    if(placed<total){ setFb("fb1","아직 "+(total-placed)+"개 표본에 점을 찍지 않았어요. 점선마다 하나씩 찍어 주세요.","warn"); }
+    else if(good===total){ setFb("fb1","훌륭해요! "+total+"개 표본을 모두 정확히 읽었습니다. 점을 이은 청록색 선이 원래 파형과 얼마나 닮았는지 보세요.","ok"); markDone(1,true); }
+    else{ setFb("fb1", total+"개 중 "+good+"개를 맞혔어요. 빨간 점은 파형의 높이와 조금 차이가 납니다. 다시 읽어 볼까요?","warn"); }
+  });
+  document.getElementById("reveal1").addEventListener("click", function(){
+    var n=state.numSamples;
+    for(var i=0;i<n;i++){ state.s1[i]={y:trueValue(i,n), checked:true, correct:true}; }
+    revealed1=true; draw1();
+    setFb("fb1","정답을 자동으로 채웠어요. 각 표본 시점에서 파형의 높이를 그대로 읽은 모습입니다.","ok"); markDone(1,true);
+  });
+  document.getElementById("reset1").addEventListener("click", function(){
+    state.s1={}; revealed1=false; draw1(); setFb("fb1","점선마다 점을 찍은 뒤 <b>정답 확인</b>을 눌러 보세요.",""); markDone(1,false);
+  });
+  document.getElementById("numSamples").addEventListener("change", function(e){
+    state.numSamples=parseInt(e.target.value,10);
+    state.s1={}; state.s2={}; state.s3={}; revealed1=false;
+    markDone(1,false); markDone(2,false); markDone(3,false);
+    draw1(); buildEnc();
+    setFb("fb1","표본 개수를 "+state.numSamples+"개로 바꿨어요. 다시 점을 찍어 보세요.","");
+  });
+
+  // =================================================================
+  // STEP 2 : 양자화
+  // =================================================================
+  var cv2 = document.getElementById("cv2");
+  var revealed2=false;
+
+  function draw2(){
+    var c=setupCanvas(cv2,320);
+    var ctx=c.ctx,w=c.w,h=c.h,m=makeMap(w,h);
+    var n=state.numSamples, L=levels();
+    ctx.clearRect(0,0,w,h);
+
+    // 가로 단계선
+    ctx.font="10px 'Space Mono',monospace";
+    for(var l=0;l<L;l++){
+      var yy=m.py(levelToY(l));
+      ctx.strokeStyle="rgba(130,150,172,0.20)"; ctx.setLineDash([3,4]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(m.padL,yy); ctx.lineTo(w-m.padR,yy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle="rgba(170,188,208,0.6)"; ctx.fillText(String(l), 8, yy+3);
+    }
+    // 세로 표본선
+    ctx.strokeStyle="rgba(170,188,208,0.16)";
+    for(var i=0;i<n;i++){ var xx=m.px(sampleTime(i,n)); ctx.beginPath(); ctx.moveTo(xx,m.padT); ctx.lineTo(xx,h-m.padB); ctx.stroke(); }
+
+    // 원래 표본값(주황 빈 동그라미) = 양자화 대상
+    for(var k=0;k<n;k++){
+      var v=trueValue(k,n); var cx=m.px(sampleTime(k,n)), cy=m.py(v);
+      ctx.strokeStyle="#FF6A3D"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,5.5,0,7); ctx.stroke();
+    }
+    // 학생이 선택한 단계(네모) + 계단 연결
+    var chosen=[];
+    for(var j=0;j<n;j++){ var s=state.s2[j]; chosen.push(s? s.level : null); }
+    // 계단선
+    ctx.strokeStyle="rgba(28,195,206,0.7)"; ctx.lineWidth=2; ctx.beginPath(); var started=false;
+    for(var a=0;a<n;a++){ if(chosen[a]==null) {started=false; continue;} var X=m.px(sampleTime(a,n)), Y=m.py(levelToY(chosen[a])); if(!started){ctx.moveTo(X,Y);started=true;} else ctx.lineTo(X,Y); }
+    ctx.stroke();
+    for(var b=0;b<n;b++){
+      var sb=state.s2[b]; if(!sb) continue;
+      var X2=m.px(sampleTime(b,n)), Y2=m.py(levelToY(sb.level));
+      var col=sb.checked ? (sb.correct? "#1FB071":"#FF5B5B") : "#1CC3CE";
+      ctx.fillStyle=col; ctx.fillRect(X2-6,Y2-6,12,12);
+    }
+  }
+
+  cv2.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    var w=cv2.clientWidth, h=cv2.clientHeight, m=makeMap(w,h);
+    var p=evtPos(cv2,e); var n=state.numSamples, L=levels();
+    // 표본 열 스냅
+    var ux=m.ux(p.x), bx=0, bdx=1e9;
+    for(var i=0;i<n;i++){ var d=Math.abs(sampleTime(i,n)-ux); if(d<bdx){bdx=d;bx=i;} }
+    // 단계 스냅
+    var uy=m.uy(p.y), bl=0, bdl=1e9;
+    for(var l=0;l<L;l++){ var dd=Math.abs(levelToY(l)-uy); if(dd<bdl){bdl=dd;bl=l;} }
+    state.s2[bx]={level:bl, checked:false, correct:false};
+    draw2(); setFb("fb2","","");
+  });
+
+  document.getElementById("check2").addEventListener("click", function(){
+    var n=state.numSamples, good=0, placed=0;
+    for(var i=0;i<n;i++){
+      var s=state.s2[i]; if(!s) continue; placed++;
+      s.checked=true; s.correct = (s.level === trueLevel(i,n));
+      if(s.correct) good++;
+    }
+    draw2();
+    if(placed<n){ setFb("fb2","아직 "+(n-placed)+"개 표본을 양자화하지 않았어요.","warn"); }
+    else if(good===n){ setFb("fb2","정확해요! 모든 표본을 가장 가까운 단계로 맞췄습니다. 이제 각 단계 번호를 부호화할 차례예요.","ok"); markDone(2,true); syncS3(); }
+    else{ setFb("fb2", n+"개 중 "+good+"개 정답. 빨간 네모는 더 가까운 단계가 따로 있어요. 표본(주황 원)과 가장 가까운 가로선을 다시 찾아보세요.","warn"); }
+  });
+  document.getElementById("reveal2").addEventListener("click", function(){
+    var n=state.numSamples;
+    for(var i=0;i<n;i++){ state.s2[i]={level:trueLevel(i,n), checked:true, correct:true}; }
+    draw2(); setFb("fb2","정답을 자동으로 채웠어요. 각 표본을 가장 가까운 단계로 반올림한 결과입니다.","ok"); markDone(2,true); syncS3();
+  });
+  document.getElementById("reset2").addEventListener("click", function(){
+    state.s2={}; draw2(); setFb("fb2","표본마다 가장 가까운 단계를 클릭해 보세요.",""); markDone(2,false);
+  });
+  document.getElementById("bits").addEventListener("change", function(e){
+    state.bits=parseInt(e.target.value,10);
+    state.s2={}; state.s3={}; markDone(2,false); markDone(3,false);
+    draw2(); buildEnc();
+    setFb("fb2","단계 수를 "+levels()+"단계("+state.bits+"비트)로 바꿨어요. 다시 양자화해 보세요.","");
+  });
+
+  // =================================================================
+  // STEP 3 : 부호화
+  // =================================================================
+  function syncS3(){ // 양자화 정답 단계를 부호화 대상으로 동기화(학생 입력은 유지)
+    buildEnc();
+  }
+  function targetLevel(i){ // 부호화할 단계 번호: 학생이 양자화했으면 그 값(정답일 때), 아니면 정답 단계
+    var s=state.s2[i];
+    if(s && s.checked && s.correct) return s.level;
+    return trueLevel(i, state.numSamples);
+  }
+  function buildEnc(){
+    var list=document.getElementById("encList");
+    var n=state.numSamples, B=state.bits;
+    document.getElementById("bitsNote").textContent = "지금은 단계가 "+levels()+"개라서 한 표본을 "+B+"개의 비트로 나타냅니다.";
+    list.innerHTML="";
+    for(var i=0;i<n;i++){
+      var lvl=targetLevel(i);
+      if(!state.s3[i] || state.s3[i].length!==B){ state.s3[i]=new Array(B).fill(0); }
+      var row=document.createElement("div"); row.className="enc-row";
+      var meta=document.createElement("div"); meta.className="meta";
+      meta.innerHTML='<span class="tnum">표본 '+(i+1)+'</span><span class="lvl">단계 '+lvl+'</span>';
+      row.appendChild(meta);
+      var bitsBox=document.createElement("div"); bitsBox.className="bits";
+      (function(idx){
+        for(var b=0;b<B;b++){
+          (function(bi){
+            var btn=document.createElement("button"); btn.className="bit"+(state.s3[idx][bi]?" on":"");
+            btn.textContent=state.s3[idx][bi];
+            btn.addEventListener("click",function(){
+              state.s3[idx][bi]= state.s3[idx][bi]?0:1;
+              btn.textContent=state.s3[idx][bi];
+              btn.classList.toggle("on", !!state.s3[idx][bi]);
+              updateRow(idx); updateStream();
+            });
+            bitsBox.appendChild(btn);
+          })(b);
+        }
+      })(i);
+      row.appendChild(bitsBox);
+      var res=document.createElement("div"); res.className="res"; res.id="res"+i;
+      row.appendChild(res);
+      list.appendChild(row);
+      updateRow(i);
+    }
+    updateStream();
+  }
+  function bitsToNum(arr){ var v=0; for(var i=0;i<arr.length;i++){ v=v*2+arr[i]; } return v; }
+  function updateRow(i){
+    var res=document.getElementById("res"+i); if(!res) return;
+    var val=bitsToNum(state.s3[i]);
+    res.textContent="= "+val;
+    res.className="res";
+  }
+  function updateStream(){
+    var n=state.numSamples, parts=[];
+    for(var i=0;i<n;i++){ parts.push(state.s3[i].join("")); }
+    document.getElementById("streamText").innerHTML = parts.map(function(p){return "<b>"+p+"</b>";}).join(" ");
+  }
+  document.getElementById("check3").addEventListener("click", function(){
+    var n=state.numSamples, good=0;
+    for(var i=0;i<n;i++){
+      var res=document.getElementById("res"+i);
+      var ok = bitsToNum(state.s3[i])===targetLevel(i);
+      res.className="res "+(ok?"ok":"bad");
+      res.textContent = (ok? "✓ ":"✗ ")+"= "+bitsToNum(state.s3[i]);
+      if(ok) good++;
+    }
+    if(good===n){ setFb("fb3","완벽해요! 모든 단계를 2진수로 정확히 부호화했습니다. 아래 0과 1의 나열이 바로 저장되는 소리 데이터예요.","ok"); markDone(3,true); }
+    else{ setFb("fb3", n+"개 중 "+good+"개 정답. ✗ 표시된 줄은 비트가 만드는 값이 단계 번호와 달라요. 왼쪽 비트가 큰 자리(4·2·1...)임을 기억하세요.","warn"); }
+  });
+  document.getElementById("reveal3").addEventListener("click", function(){
+    var n=state.numSamples, B=state.bits;
+    for(var i=0;i<n;i++){
+      var lvl=targetLevel(i), arr=new Array(B).fill(0);
+      for(var b=B-1;b>=0;b--){ arr[b]=lvl&1; lvl>>=1; }
+      state.s3[i]=arr;
+    }
+    buildEnc();
+    for(var i2=0;i2<n;i2++){ var res=document.getElementById("res"+i2); res.className="res ok"; res.textContent="✓ = "+bitsToNum(state.s3[i2]); }
+    setFb("fb3","정답을 자동으로 채웠어요. 각 단계 번호를 "+B+"자리 2진수로 바꾼 결과입니다.","ok"); markDone(3,true);
+  });
+  document.getElementById("reset3").addEventListener("click", function(){
+    state.s3={}; buildEnc(); setFb("fb3","각 단계 번호를 2진수로 바꿔 보세요.",""); markDone(3,false);
+  });
+
+  // =================================================================
+  // 네비게이션 / 공통
+  // =================================================================
+  function setFb(id,msg,cls){ var el=document.getElementById(id); el.innerHTML=msg||el.innerHTML; el.className="feedback"+(cls?" "+cls:""); if(msg!=="")el.innerHTML=msg; }
+  function markDone(step, done){
+    var b=document.querySelector('.stepbtn[data-step="'+step+'"]');
+    if(b) b.classList.toggle("done", !!done);
+  }
+  function show(step){
+    document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.getAttribute("data-panel")==String(step)); });
+    document.querySelectorAll(".stepbtn").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-step")==String(step)); });
+    if(step==1) draw1();
+    if(step==2) draw2();
+    if(step==3) buildEnc();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  document.querySelectorAll(".stepbtn").forEach(function(b){
+    b.addEventListener("click", function(){ show(parseInt(b.getAttribute("data-step"),10)); });
+  });
+  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+
+  // 헤더 장식 파형
+  (function(){
+    var path=document.getElementById("mark-wave"), dots=document.getElementById("mark-dots");
+    if(!path) return;
+    var d="", n=230;
+    for(var i=0;i<=n;i++){ var x=i, y=80 + 38*Math.sin(i/16) + 14*Math.sin(i/5); d+=(i===0?"M":"L")+x+" "+y.toFixed(1)+" "; }
+    path.setAttribute("d",d);
+    var g="";
+    for(var k=1;k<8;k++){ var X=k*28; var Y=80 + 38*Math.sin(X/16) + 14*Math.sin(X/5); g+='<circle cx="'+X+'" cy="'+Y.toFixed(1)+'" r="3.5" fill="var(--digital)"/>'; }
+    dots.innerHTML=g;
+  })();
+
+  // 초기 렌더 & 리사이즈
+  function redrawActive(){
+    var active=document.querySelector(".panel.active");
+    var s=active? active.getAttribute("data-panel"):"1";
+    if(s=="1") draw1(); else if(s=="2") draw2();
+  }
+  window.addEventListener("resize", function(){ clearTimeout(window.__rt); window.__rt=setTimeout(redrawActive,120); });
+
+  buildEnc();
+  draw1();
+})();
+</script>
+</body>
+</html>
